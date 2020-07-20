@@ -1,0 +1,155 @@
+---
+title: |
+  | Bayesian Learning: Lab 4
+author: |
+  | Mohsen Pirmoradiyan, Ahmed Alhasan
+date: "`r Sys.Date()`"
+geometry: "left=2cm,right=2cm,top=1.5cm,bottom=2cm"
+output:
+  pdf_document: 
+header-includes: 
+  \usepackage{xcolor}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = "center", warning = FALSE, out.width = "70%", fig.height=4, message = FALSE, warning = FALSE)
+knitr::read_chunk("R_Code.r")
+```
+
+## 1. *Time series models in Stan.* 
+
+(a) Write a function in R that simulates data from the AR(1)-process
+$$ x_t = \mu + \phi(x_{t-1} - \mu) + \epsilon_t,  \;\; \epsilon_t \stackrel{iid}{\sim} N(0, \sigma^2)      $$
+for given values of $\mu$, $\phi$ and $\sigma^2$. Start the process at $x_1$ = $\mu$ and then simulate values for $x_t$ for t = 2, 3 . . . , T and return the vector $x_{1:T}$ containing all time points. Use $\mu$ = 10, $\sigma^2$ = 2 and T = 200 and look at some different realizations (simulations) of $x_{1:T}$ for values of $\phi$ between -1 and 1 (this is the interval of $\phi$ where the AR(1)-process is stable). Include a plot of at least one realization in the report. What effect does the value of $\phi$ have on $x_{1:T}$?
+```{r a, out.width="90%", fig.height=5}
+```
+
+\definecolor{mycolor}{HTML}{00007D}
+- \textcolor{mycolor}{When $\phi$ approches 1 the value of $x_t$ get a larger contribution from the previous point $x_{t-1}$ compared with the white noise $\epsilon_t$, therefore we see a correlation between $x_t$ values.}
+
+- \textcolor{mycolor}{When $\phi = 0$ the value of $x_t$ is just the error $\epsilon_t$ around the mean $\mu$ i.e.($x_t = \mu + \epsilon_t$).}
+
+- \textcolor{mycolor}{When $\phi$ approches -1 the value of $x_t$ also get a larger contribution from the previous term $x_{t-1}$ compared with the white noise $\epsilon_t$ but this time the middle term $\phi(x_{t-1} - \mu)$ will have opposite sign for each successive points in oscillations}
+
+- \textcolor{mycolor}{When $\phi = 1$ the variance of $x_t$ depends on time lag t, so that the variance of the series diverges to infinity as t goes to infinity, and same thing for $\phi =- 1$ but this time with overlapping signs as explained above.}
+
+(b) Use your function from a) to simulate two AR(1)-processes, $x_{1:T}$ with $\phi$ = 0.3 and $y_{1:T}$ with $\phi$ = 0.95. Now, treat your simulated vectors as synthetic data, and treat the values of $\mu$, $\phi$ and $\sigma^2$ as unknown and estimate them using MCMC. Implement Stan-code that samples from the posterior of the three parameters, using suitable non-informative priors of your choice. [Hint: Look at the time-series models examples in the Stan reference manual, and note the different parameterization used here.]
+```{r engine='cat',engine.opts=list(file="Other/Stan/AR1.stan",lang="stan")}
+data {
+  int<lower=0> N;
+  vector[N] x;
+}
+
+parameters {
+  real mu;
+  real phi;
+  real<lower=0> sdSq;
+}
+
+model {
+  mu ~ normal(0, 1000);
+  phi ~ uniform(-1000, 1000);
+  sdSq ~ uniform(0, 1000000);
+  
+  x[2:N] ~ normal(mu + phi * (x[1:(N - 1)] - mu), sqrt(sdSq));
+}
+
+```
+
+> (i) Report the posterior mean, 95% credible intervals and the number of effective posterior samples for the three inferred parameters for each of the simulated AR(1)-process. Are you able to estimate the true values?
+
+```{r b_i, fig.height=3.5}
+```
+
+- \textcolor{mycolor}{From the plots and the tables it seems harder to estimate $\mu_y$ because it has larger credible interval}
+
+> (ii) For each of the two data sets, evaluate the convergence of the samplers and plot the joint posterior of $\mu$ and $\phi$. Comments?
+
+```{r b_ii_1, fig.height=3.5}
+```
+
+- \textcolor{mycolor}{The red dots in the second plot are the divergent transitions which can be explained by the highly varying posterior curvature causing HMC trajectory to depart from the true trajectory}
+
+- \textcolor{mycolor}{In another stan model where we used the constraints '<lower = -1, upper = 1>' as constraints for $\phi$, most of the divergent transitions disappeared which also explain the high divergence in this model is because the series variance became too large for the HMC to keep track of}
+
+```{r b_ii_2, fig.height=5, out.width="100%"}
+```
+
+```{r b_ii_3}
+```
+
+- \textcolor{mycolor}{The percentage of the divergent transtions when $\phi_y = 0.95$ is too high for the posterior estimates to be trusted}
+   
+    
+(c) The data `campy.dat` contain the number of cases of campylobacter infections in the north of the province Quebec (Canada) in four week intervals from January 1990 to the end of October 2000. It has 13 observations per year and 140 observations in total. Assume that the number of infections $c_t$ at each time point follows an independent Poisson distribution when conditioned on a latent AR(1)-process $x_t$, that is
+
+$$c_t | x_t  \sim Poisson(exp(x_t))$$
+
+> where $x_t$ is an AR(1)-process as in a). Implement and estimate the model in Stan, using suitable priors of your choice. Produce a plot that contains both the data and the posterior mean and 95% credible intervals for the latent intensity $\theta_t = \text{exp} (x_t)$ over time. [Hint: Should $x_t$ be seen as data or parameters?]
+
+```{r engine='cat',engine.opts=list(file="Other/Stan/AR2.stan",lang="stan")}
+data {
+  int<lower=0> N;
+  int y[N,1];
+}
+
+parameters {
+  real mu;
+  real<lower = -1, upper = 1> phi;
+  real<lower=0> sdSq;
+  vector[N] x;
+}
+
+model {
+  mu ~ normal(0, 2); 
+  phi ~ uniform(-1, 1); 
+  sdSq ~ scaled_inv_chi_square(1, 5); 
+  
+  x[2:N] ~ normal(mu + phi * (x[1:(N-1)] - mu), sqrt(sdSq));
+  y[1:N,1] ~ poisson(exp(x[1:N])); 
+}
+
+```
+
+```{r c}
+```
+
+- \textcolor{mycolor}{Here because now we are working on a hierarchical model, Stan will integrate out all the parameters that are conditioned on $x_t$:}
+
+$$\color{mycolor}{p(c_t|x_t) = \int\int\int p \left(c_t,\mu,\phi,\sigma^2|x_t \right) d\mu \; d\phi \; d\sigma^2}$$
+
+(d) Now, assume that we have a prior belief that the true underlying intensity $\theta_t$ varies more smoothly than the data suggests. Change the prior for $\sigma^2$ so that it becomes informative about that the AR(1)-process increments $\epsilon_t$ should be small. Re-estimate the model using Stan with the new prior and produce the same plot as in c). Has the posterior for $\theta_t$ changed?
+
+```{r engine='cat',engine.opts=list(file="Other/Stan/AR3.stan",lang="stan")}
+data {
+  int<lower=0> N;
+  int y[N,1];
+}
+
+parameters {
+  real mu;
+  real<lower = -1, upper = 1> phi;
+  real<lower=0> sdSq;
+  vector[N] x;
+}
+
+model {
+  mu ~ normal(0, 2); 
+  phi ~ uniform(-1, 1); 
+  sdSq ~ scaled_inv_chi_square(140, 0.1); 
+  
+  x[2:N] ~ normal(mu + phi * (x[1:(N-1)] - mu), sqrt(sdSq));
+  y[1:N,1] ~ poisson(exp(x[1:N]));
+}
+
+```
+
+```{r d}
+```
+
+- \textcolor{mycolor}{The posterior of $c_t$ has changed because we used a more informative prior that gives a strong belief on where $c_t$ is by reducing and increasing the hyper-parameters ($\sigma^2$ and $\nu$ respectively) of the model variance.}
+
+\newpage
+## Appendix
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
+```

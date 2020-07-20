@@ -1,0 +1,205 @@
+---
+title: |
+  | Bayesian Learning: Lab 3
+author: |
+  | Mohsen Pirmoradiyan, Ahmed Alhasan
+date: "`r Sys.Date()`"
+geometry: "left=2cm,right=2cm,top=1.5cm,bottom=2cm"
+output:
+  pdf_document: 
+header-includes: 
+  \usepackage{xcolor}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = "center", warning = FALSE, out.width = "70%", fig.height=4)
+knitr::read_chunk("R_Code.r")
+```
+
+## 1. *Normal model, mixture of normal model with semi-conjugate prior.* 
+The data `rainfall.dat` consist of daily records, from the beginning of 1948 to the end of 1983, of precipitation (rain or snow in units of $\frac{1}{100}$ inch, and records of zero precipitation are excluded) at Snoqualmie Falls, Washington. Analyze the data using the following two models.
+
+
+(a) *Normal Model* \newline
+Assume the daily precipitation {$y_1,...,y_n$} are independent normally distributed,
+$y_1,...,y_n|\mu,\sigma^2 \sim \mathcal{N}(\mu,\sigma^2)$ where both $\mu$ and $\sigma^2$ are unknown. Let $\mu \sim \mathcal{N}(\mu_0,\tau_0^2)$ independently of $\sigma^2 \sim Inv -\chi^2(\nu_0,\sigma_0^2)$
+
+> i. Implement (code!) a Gibbs sampler that simulates from the joint posterior $p(\mu,\sigma^2|y_1,...,y_n)$. The full conditional posteriors are given on the slides from Lecture 7.
+
+\definecolor{mycolor}{HTML}{00007D}
+\textcolor{mycolor}{Priors:}
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+\mu       &\sim  \mathcal{N}(\mu_0,\tau_0^2) \\
+\sigma^2  &\sim  Inv-\chi^2(v_0,\sigma_0^2)
+\end{aligned}
+$$
+\textcolor{mycolor}{Full Conditional Posteriors:} 
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+\mu|\sigma^2,x  &\sim  \mathcal{N}(\mu_n,\tau_n^2) \\
+\sigma^2|\mu,x  &\sim  Inv-\chi^2 \left(v_n,\frac{v_o\sigma_0^2 +\sum_{i=0}^{n}(x_i-\mu)^2}{n+v_0}\right)\\
+\end{aligned}
+$$
+\textcolor{mycolor}{Where:}
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+\mu_n    &= w\bar{x} + (1-w)\mu_0 \\
+w        &= \frac{n/\sigma^2}{n/\sigma^2+1/\tau_0^2} \\
+\tau_n^2 &= \frac{1}{n/\sigma^2 + 1/\tau_0^2} \\
+\nu_n    &= \nu_0 + n 
+\end{aligned}
+$$
+```{r 1_a_i1}
+```
+```{r 1_a_i2, fig.height=3.5}
+```
+
+> ii. Analyze the daily precipitation using your Gibbs sampler in (a)-i. Evaluate the convergence of the Gibbs sampler by suitable graphical methods, for example by plotting the trajectories of the sampled Markov chains.
+
+```{r 1_a_ii}
+```
+
+(b) *Mixture normal model.* \newline
+Let us now instead assume that the daily precipitation {$y_1,...,y_n$} follow an iid two-component **mixture of normals** model:
+
+$$p(y_i|\mu,\sigma^2,\pi) = \pi \mathcal{N}(y_i|\mu_1, \sigma_1^2) + (1 - \pi) \mathcal{N}(y_i|\mu_2, \sigma_2^2)$$
+
+> where
+
+$$\mu = (\mu_1, \mu_2) \; \text{and} \; \sigma^2 = (\sigma_1^2, \sigma_2^2)$$
+
+> Use the Gibbs sampling data augmentation algorithm in `NormalMixtureGibbs.R` (available under Lecture 7 on the course page) to analyze the daily precipitation data. Set the prior hyperparameters suitably. Evaluate the convergence of the sampler.
+
+```{r 1_b}
+```
+
+
+
+(c) *Graphical comparison.* \newline
+Plot the following densities in one figure: 1) a histogram or kernel density estimate of the data. 2) Normal density $\mathcal{N}(y_i|\mu, \sigma^2)$ in (a); 3) Mixture of normals density $p(y_i|\mu,\sigma^2,\pi)$ in (b). Base your plots on the mean over all posterior draws.
+```{r 1_c}
+```
+
+\newpage 
+## 2. *Metropolis Random Walk for Poisson regression.* 
+Consider the following Poisson regression model
+
+$$y_i|\beta \sim \text{Poisson}\left[ \text{exp}(x_i^T\beta)\right], \; i = 1,...,n$$
+
+> where $y_i$ is the count for the *i*th observation in the sample and $x_i$ is the p-dimensional vector with covariate observations for the *i*th observation. Use the data set `eBayNumberOfBidderData.dat`. This dataset contains observations from 1000 eBay auctions of coins. The response variable is **nBids** and records the number of bids in each auction. The remaining variables are features/covariates (x):
+
+- **Const** (for the intercept)
+
+- **PowerSeller** (is the seller selling large volumes on eBay?)
+
+- **VerifyID** (is the seller verified by eBay?)
+
+- **Sealed** (was the coin sold sealed in never opened envelope?)
+
+- **MinBlem** (did the coin have a minor defect?)
+
+- **MajBlem** (a major defect?)
+
+- **LargNeg** (did the seller get a lot of negative feedback from customers?)
+
+- **LogBook** (logarithm of the coins book value according to expert sellers. Stan- dardized)
+
+- **MinBidShare** (a variable that measures ratio of the minimum selling price (starting price) to the book value. Standardized).
+
+(a) Obtain the maximum likelihood estimator of $\beta$ in the Poisson regression model for the eBay data [Hint: `glm.R`, don’t forget that `glm()` adds its own intercept so don’t input the covariate Const]. Which covariates are significant?
+```{r 2_a1}
+```
+
+- \textcolor{mycolor}{Significant Covariates with P-value smaller than 0.05}
+```{r 2_a2}
+```
+
+(b) Let’s now do a Bayesian analysis of the Poisson regression. Let the prior be $\beta \sim \mathcal{N}[\mathbf{0}, 100 \cdot (X^TX)^{-1}]$ where **X** is the $n \times p$ covariate matrix. This is a commonly used prior which is called Zellner’s g-prior. Assume first that the posterior density is approximately multivariate normal:
+
+$$\beta|y \sim \mathcal{N}[\tilde{\beta}, J_y^{-1}(\tilde{\beta})],$$
+
+> where $\tilde{\beta}$ is the posterior mode and $J_y(\tilde{\beta})$ is the negative Hessian at the posterior mode. $\tilde{\beta}$ and $J_y(\tilde{\beta})$ can be obtained by numerical optimization (`optim.R`) exactly like you already did for the logistic regression in Lab 2 (but with the log posterior function replaced by the corresponding one for the Poisson model, which you have to code up.).
+
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+P(y|\lambda) = \frac{\lambda^y \cdot e^{-\lambda}}{y!}
+\end{aligned}
+$$
+
+\textcolor{mycolor}{And given that $y_i|\beta \sim \text{Poisson}\left[ \text{exp}(x_i^T\beta)\right]$}:
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+P(y|\beta, X) = \frac{e^{y_i(X_i^T\beta)} \cdot e^{-\exp(X_i^T\beta)}}{y_i!} = \frac{e^{y_i(X_i^T\beta)-\exp(X_i^T\beta)}}{y_i!}
+\end{aligned}
+$$
+
+\textcolor{mycolor}{Getting the likelihood}
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+L(\beta|X,y) = \prod_{i=1}^{N} \frac{e^{y_i(X_i^T\beta)-\exp(X_i^T\beta)}}{y_i!}
+\end{aligned}
+$$
+
+\textcolor{mycolor}{Taking the log of each side we get:}
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+\mathcal{L}(\beta|X,y) = \sum_{i=1}^{n} \bigg(y_i(X_i^T\beta) - \exp(X_i^T\beta)\bigg) - \sum_{i=1}^{n}log(y_i!)
+\end{aligned}
+$$
+
+\textcolor{mycolor}{And dropping the last term because $\beta$ does not depend on it}
+$$
+\everymath{\color{mycolor}}
+\begin{aligned}
+\mathcal{L}(\beta|X,y) \propto \sum_{i=1}^{n} \bigg(y_i(X_i^T\beta) - \exp(X_i^T\beta)\bigg)
+\end{aligned}
+$$
+```{r 2_b}
+```
+
+
+(c) Now, let’s simulate from the actual posterior of $\beta$ using the Metropolis algorithm and compare with the approximate results in b). Program a general function that uses the Metropolis algorithm to generate random draws from an arbitrary posterior density. In order to show that it is a general function for any model, I will denote the vector of model parameters by $\theta$. Let the proposal density be the multivariate normal density mentioned in Lecture 8 (random walk Metropolis):
+
+$$\theta_p|\theta^{(i-1)} \sim \mathcal{N}(\theta^{(i-1)}, c \cdot \Sigma),$$
+
+> where $\Sigma = J_y^{-1}(\tilde{\beta})$ obtained in b). The value c is a tuning parameter and should be an input to your Metropolis function. The user of your Metropolis function should be able to supply her own posterior density function, not necessarily for the Poisson regression, and still be able to use your Metropolis function. This is not so straightforward, unless you have come across *function objects* in R and the triple dot ( ... ) wildcard argument. I have posted a note (`HowToCodeRWM.pdf`) on the course web page that describes how to do this in R.
+
+> Now, use your new Metropolis function to sample from the posterior of $\beta$ in the Poisson regression for the eBay dataset. Assess MCMC convergence by graphical methods.
+
+```{r 2_c, fig.height = 6, out.width = "100%"}
+```
+(d) Use the MCMC draws from c) to simulate from the predictive distribution of the number of bidders in a new auction with the characteristics below. Plot the predictive distribution. What is the probability of no bidders in this new auction?
+
+- **PowerSeller** = 1
+
+- **VerifyID** = 1
+
+- **Sealed** = 1
+
+- **MinBlem** = 0
+
+- **MajBlem** = 0
+
+- **LargNeg** = 0
+
+- **LogBook** = 1
+
+- **MinBidShare** = 0.5
+
+&nbsp;
+```{r 2_d}
+```
+
+
+\newpage
+## Appendix
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
+```

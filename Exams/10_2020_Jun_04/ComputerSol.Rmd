@@ -1,0 +1,71 @@
+---
+title: "Exam Solutions"
+author: "Ahmed Alhasan 'ahmal787'"
+output: pdf_document
+date: "`r Sys.Date()`"
+header-includes: 
+  \usepackage{xcolor}
+---
+
+\definecolor{mycolor}{HTML}{00007D}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", warning = FALSE, out.width = "80%", fig.height=4)
+knitr::read_chunk("R_Code.r")
+```
+
+
+## Q1
+- (a)
+```{r q1_a}
+```
+
+
+- (b)
+```{r q1_b}
+```
+
+
+- (c)
+```{r q1_c}
+```
+
+## Q2
+- (a)
+```{r q2_a, fig.height=6}
+```
+
+
+- (b)
+```{r q2_b}
+```
+
+
+- (c)
+```{r q2_c}
+```
+
+
+- (d)
+```{r q2_d}
+```
+
+## Q3
+- (a)
+```{r q3_a, eval=FALSE}
+```
+
+
+- (b)
+```{r q3_b}
+```
+
+
+
+## Q4
+- (c)
+```{r q4_c}
+```
+
+
+
+
