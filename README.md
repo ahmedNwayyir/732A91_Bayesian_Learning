@@ -3,8 +3,6 @@ Linköping University, 2nd semester 2020
 
 ## Intended learning outcomes
 
-After completion of the course the student should at an advanced level be able to:
-
 - account for the main differences between Bayesian and frequentist inference,
 - analyze basic statistical models using a Bayesian approach and correctly interpret the results,
 - use Bayesian models for prediction and decision making,
